@@ -3,6 +3,7 @@ package main
 import (
 	"api-gateway/config"
 	"bytes"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -22,6 +23,14 @@ func (g *APIGateway) ForwardRequests(w http.ResponseWriter, r *http.Request) {
 
 	bodyBytes, err := io.ReadAll(r.Body)
 
+	var prettyJSON bytes.Buffer
+
+	if err := json.Indent(&prettyJSON, bodyBytes, "", "  "); err != nil {
+		logger.Debug("Invalid JSON body, logging raw body", string(bodyBytes))
+	} else {
+		logger.Debug("Parsed JSON Body", prettyJSON.String())
+	}
+
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 		return
@@ -37,6 +46,8 @@ func (g *APIGateway) ForwardRequests(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Invalid backend URL: %s\n", service)
 				return
 			}
+			logger.Debug("Method", r.Method)
+
 			proxyReq, err := http.NewRequest(r.Method, r.URL.ResolveReference(serviceURL).String(), bytes.NewReader(bodyBytes))
 			if err != nil {
 				log.Printf("Failed to create request for backend %s: %v\n", serviceURL, err)
@@ -45,6 +56,8 @@ func (g *APIGateway) ForwardRequests(w http.ResponseWriter, r *http.Request) {
 
 			// Sao chép headers từ request gốc
 			proxyReq.Header = r.Header
+
+			logger.Debug("Header request :", proxyReq.Header)
 
 			// Gửi request đến backend
 			client := &http.Client{}
