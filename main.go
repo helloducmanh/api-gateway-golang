@@ -1,13 +1,12 @@
 package main
 
 import (
+	"api-gateway/config"
 	"bytes"
-	"go-mvc/config"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/op/go-logging"
 )
@@ -66,17 +65,15 @@ func (g *APIGateway) ForwardRequests(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	// load config
-	config, err := config.LoadConfig("")
+	config, err := config.LoadConfigDockerfile()
 
 	if err != nil {
 		logger.Error("error when get config, %v", err)
 		return
 	}
-	// Danh sách các backend server
-	services := strings.Split(config.ServerAddress, ",")
 
 	// Tạo API Gateway
-	gateway := &APIGateway{Services: services}
+	gateway := &APIGateway{Services: config.Servers}
 
 	http.HandleFunc("/", gateway.ForwardRequests)
 
