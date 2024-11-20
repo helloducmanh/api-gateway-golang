@@ -16,9 +16,11 @@ EXPOSE 8080
 
 ENV PREFIX_SERVICE=SERVER_ADDRESS_
 
-ENV SERVER_ADDRESS_1=http://host.docker.internal:3000/server
+ENV SERVER_ADDRESS_1=http://192.168.13.225:6969
 
-ENV SERVER_ADDRESS_2=http://host.docker.internal:3001
+ENV SERVER_ADDRESS_2=http://192.168.13.147:6969
+
+ENV SERVER_ADDRESS_3=http://host.docker.internal:3000
 
 CMD ["./main"]
 

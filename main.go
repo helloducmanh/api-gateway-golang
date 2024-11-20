@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/gorilla/mux"
 	"github.com/op/go-logging"
 )
 
@@ -35,6 +36,12 @@ func (g *APIGateway) ForwardRequests(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 		return
 	}
+
+	// dynamic path
+	vars := mux.Vars(r) // Lấy các biến từ route
+	dynamicPath := vars["any"]
+
+	logger.Debug("dynamicPath", dynamicPath)
 	// Đóng Body để tránh rò rỉ tài nguyên
 	defer r.Body.Close()
 
@@ -48,7 +55,15 @@ func (g *APIGateway) ForwardRequests(w http.ResponseWriter, r *http.Request) {
 			}
 			logger.Debug("Method", r.Method)
 
-			proxyReq, err := http.NewRequest(r.Method, r.URL.ResolveReference(serviceURL).String(), bytes.NewReader(bodyBytes))
+			// Gắn path vào backend URL
+			//r.URL.ResolveReference(serviceURL).String()
+			backendURL := serviceURL.ResolveReference(&url.URL{
+				Path:     dynamicPath,
+				RawQuery: r.URL.RawQuery,
+			})
+			logger.Debug("url : ", backendURL)
+
+			proxyReq, err := http.NewRequest(r.Method, backendURL.String(), bytes.NewReader(bodyBytes))
 			if err != nil {
 				log.Printf("Failed to create request for backend %s: %v\n", serviceURL, err)
 				return
@@ -88,8 +103,10 @@ func main() {
 	// Tạo API Gateway
 	gateway := &APIGateway{Services: config.Servers}
 
-	http.HandleFunc("/", gateway.ForwardRequests)
+	// dung mux handle dynamic router
+	router := mux.NewRouter()
+	router.HandleFunc("/{any:.*}", gateway.ForwardRequests).Methods("GET", "POST", "PUT", "DELETE")
 
 	log.Println("API Gateway running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	http.ListenAndServe(":8080", router)
 }
